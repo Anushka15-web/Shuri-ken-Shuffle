@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shuri-ken Shuffle - Arcade Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #0b1530;
+        --accent: #e23b2b;
+        --bamboo: #6aa84f;
+        --paper: #f3e9d6;
+        --dark-blue: #1a2645;
+        --gold: #ffd700;
+        --shadow: rgba(0, 0, 0, 0.8);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #0a0a1a 0%, var(--bg) 50%, #1a1530 100%);
+        font-family: 'Press Start 2P', cursive;
+        overflow: hidden;
+        color: var(--paper);
+      }
+
+      #app {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100vh;
+      }
+
+      #game-container {
+        position: relative;
+        width: 480px;
+        height: 640px;
+        background: linear-gradient(180deg, #87ceeb 0%, #b4d7f5 40%, #f0e8d8 100%);
+        border: 10px solid #1a1a1a;
+        box-shadow:
+          0 0 0 4px var(--accent),
+          0 0 0 8px #1a1a1a,
+          0 20px 60px var(--shadow),
+          inset 0 0 30px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      #gameCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      #hud {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 16px;
+        z-index: 10;
+        pointer-events: none;
+      }
+
+      #score-display,
+      #high-score-display {
+        background: var(--dark-blue);
+        border: 4px solid var(--paper);
+        padding: 8px 12px;
+        box-shadow: 4px 4px 0 var(--shadow);
+        pointer-events: all;
+      }
+
+      .score-label {
+        font-size: 8px;
+        color: var(--gold);
+        margin-bottom: 4px;
+        letter-spacing: 1px;
+      }
+
+      #score,
+      #high-score {
+        font-size: 18px;
+        color: var(--paper);
+        text-align: center;
+      }
+
+      #mute-toggle {
+        background: var(--accent);
+        border: 4px solid var(--paper);
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+        cursor: pointer;
+        box-shadow: 4px 4px 0 var(--shadow);
+        pointer-events: all;
+        transition: transform 0.1s;
+      }
+
+      #mute-toggle:hover {
+        transform: scale(1.05);
+      }
+
+      #mute-toggle:active {
+        transform: scale(0.95);
+      }
+
+      #mute-toggle.muted {
+        background: #666;
+      }
+
+      .screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+          linear-gradient(135deg, rgba(26, 38, 69, 0.95) 0%, rgba(11, 21, 48, 0.95) 100%),
+          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 30;
+        backdrop-filter: blur(2px);
+      }
+
+      .screen.hidden {
+        display: none;
+      }
+
+      .screen-content {
+        text-align: center;
+        padding: 20px;
+      }
+
+      .game-title {
+        font-size: 36px;
+        color: var(--accent);
+        text-shadow:
+          4px 4px 0 var(--gold),
+          8px 8px 0 var(--shadow);
+        margin-bottom: 30px;
+        animation: titlePulse 2s ease-in-out infinite;
+        line-height: 1.4;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .title-line {
+        display: block;
+      }
+
+      @keyframes titlePulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.03);
+        }
+      }
+
+      .ninja-banner {
+        font-size: 64px;
+        margin: 20px 0;
+        animation: float 3s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%, 100% {
+          transform: translateY(0) rotate(-5deg);
+        }
+        50% {
+          transform: translateY(-10px) rotate(5deg);
+        }
+      }
+
+      .instructions {
+        margin: 30px 0;
+        font-size: 12px;
+        color: var(--paper);
+        line-height: 1.8;
+      }
+
+      .instructions p {
+        margin: 8px 0;
+      }
+
+      .start-prompt {
+        font-size: 14px;
+        color: var(--gold);
+        margin-top: 40px;
+        animation: blink 1.2s ease-in-out infinite;
+        text-shadow: 2px 2px 0 var(--shadow);
+      }
+
+      @keyframes blink {
+        0%, 50%, 100% {
+          opacity: 1;
+        }
+        25%, 75% {
+          opacity: 0.3;
+        }
+      }
+
+      .game-over-title {
+        font-size: 42px;
+        color: var(--accent);
+        text-shadow:
+          4px 4px 0 #000,
+          -2px -2px 0 #000,
+          2px -2px 0 #000,
+          -2px 2px 0 #000,
+          6px 6px 0 var(--gold);
+        margin-bottom: 40px;
+        animation: shakeOnce 0.5s ease-in-out;
+      }
+
+      @keyframes shakeOnce {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+        20%, 40%, 60%, 80% { transform: translateX(4px); }
+      }
+
+      .score-panel {
+        background: var(--paper);
+        border: 6px solid var(--accent);
+        padding: 20px 30px;
+        margin: 30px auto;
+        max-width: 300px;
+        box-shadow:
+          inset 0 0 10px rgba(0, 0, 0, 0.2),
+          6px 6px 0 var(--shadow);
+      }
+
+      .final-score-line,
+      .high-score-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 12px 0;
+        font-size: 16px;
+      }
+
+      .final-score-line .label,
+      .high-score-line .label {
+        color: var(--dark-blue);
+      }
+
+      .final-score-line .value {
+        color: var(--accent);
+        font-size: 24px;
+      }
+
+      .high-score-line .value {
+        color: var(--gold);
+        font-size: 20px;
+      }
+
+      .restart-prompt {
+        font-size: 12px;
+        color: var(--bamboo);
+        margin-top: 40px;
+        animation: blink 1s ease-in-out infinite;
+        text-shadow: 2px 2px 0 var(--shadow);
+      }
+
+      @media (max-width: 520px), (max-height: 680px) {
+        #game-container {
+          width: 100vw;
+          height: 100vh;
+          border: none;
+          box-shadow: none;
+        }
+
+        .game-title {
+          font-size: 28px;
+        }
+
+        .ninja-banner {
+          font-size: 48px;
+        }
+
+        .instructions {
+          font-size: 10px;
+        }
+
+        .start-prompt {
+          font-size: 11px;
+        }
+
+        .game-over-title {
+          font-size: 32px;
+        }
+
+        .score-panel {
+          padding: 16px 20px;
+        }
+
+        .final-score-line,
+        .high-score-line {
+          font-size: 14px;
+        }
+
+        .final-score-line .value {
+          font-size: 20px;
+        }
+
+        .high-score-line .value {
+          font-size: 18px;
+        }
+      }
+
+      @media (hover: hover) {
+        #mute-toggle:hover {
+          box-shadow: 4px 4px 0 var(--shadow), 0 0 10px var(--gold);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="game-container">
+        <canvas id="gameCanvas" role="img" aria-label="Shuri-ken Shuffle game canvas"></canvas>
+
+        <div id="hud">
+          <div id="score-display">
+            <div class="score-label">SCORE</div>
+            <div id="score">0</div>
+          </div>
+          <div id="high-score-display">
+            <div class="score-label">HIGH</div>
+            <div id="high-score">0</div>
+          </div>
+          <button id="mute-toggle" aria-label="Toggle sound">🔊</button>
+        </div>
+
+        <div id="start-screen" class="screen">
+          <div class="screen-content">
+            <h1 class="game-title">
+              <span class="title-line">SHURI-KEN</span>
+              <span class="title-line">SHUFFLE</span>
+            </h1>
+            <div class="ninja-banner">🥷</div>
+            <div class="instructions">
+              <p>PRESS SPACE OR TAP</p>
+              <p>TO THROW SHURIKEN</p>
+            </div>
+            <div class="start-prompt">▶ PRESS SPACE TO START ◀</div>
+          </div>
+        </div>
+
+        <div id="game-over-screen" class="screen hidden">
+          <div class="screen-content game-over-content">
+            <h1 class="game-over-title">GAME OVER</h1>
+            <div class="score-panel">
+              <div class="final-score-line">
+                <span class="label">SCORE:</span>
+                <span id="final-score" class="value">0</span>
+              </div>
+              <div class="high-score-line">
+                <span class="label">HIGH:</span>
+                <span id="final-high-score" class="value">0</span>
+              </div>
+            </div>
+            <div class="restart-prompt">PRESS SPACE TO RETRY</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="game.js"></script>
+  </body>
+</html>
